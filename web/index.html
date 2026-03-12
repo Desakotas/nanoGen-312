@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nanoGen Image Editor</title>
+  <style>
+    :root {
+      --bg-a: #f3ece2;
+      --bg-b: #dce9e7;
+      --ink: #13252f;
+      --muted: #3d5866;
+      --panel: #ffffffd1;
+      --line: #13252f26;
+      --accent: #c94f25;
+      --accent-ink: #fff4ed;
+      --ok: #0d7f57;
+      --err: #b42318;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Avenir Next", "Avenir", "Trebuchet MS", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 14% 12%, #fcd8ae 0%, #fcd8ae55 36%, transparent 58%),
+        radial-gradient(circle at 84% 86%, #87c9c2 0%, #87c9c255 36%, transparent 60%),
+        linear-gradient(140deg, var(--bg-a), var(--bg-b));
+      padding: 12px;
+      display: grid;
+      place-items: center;
+    }
+
+    .shell {
+      width: min(980px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--panel);
+      backdrop-filter: blur(7px);
+      box-shadow: 0 24px 42px #13252f24;
+      max-height: calc(100vh - 24px);
+      overflow-y: auto;
+    }
+
+    .head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(90deg, #ffffffde, #ffffff9e);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.1rem, 1.3vw, 1.45rem);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .sub {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      background: #ffffffd7;
+      display: grid;
+      gap: 8px;
+      min-height: 300px;
+    }
+
+    .label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .paste-zone {
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: #f7fbfb;
+      display: grid;
+      gap: 6px;
+    }
+
+    .paste-zone strong {
+      font-size: 0.96rem;
+    }
+
+    .paste-zone small {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .browse {
+      display: inline-block;
+      width: fit-content;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .browse input {
+      display: none;
+    }
+
+    .preview {
+      width: 100%;
+      flex: 1;
+      min-height: 200px;
+      max-height: 42vh;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      object-fit: contain;
+      background: #f8fbfc;
+    }
+
+    .result-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .download {
+      display: none;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.94rem;
+    }
+
+    .composer {
+      border-top: 1px solid var(--line);
+      padding: 10px;
+      background: #ffffffe3;
+      display: grid;
+      gap: 8px;
+    }
+
+    .composer textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      resize: vertical;
+      min-height: 82px;
+      padding: 10px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 4px;
+      min-width: 260px;
+    }
+
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      letter-spacing: 0.03em;
+      font-weight: 700;
+      background: var(--accent);
+      color: var(--accent-ink);
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .status.ok {
+      color: var(--ok);
+    }
+
+    .status.err {
+      color: var(--err);
+    }
+
+    @media (max-width: 900px) {
+      .panels {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        min-height: 280px;
+      }
+
+      .preview {
+        max-height: 34vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="head">
+      <h1>nanoGen Image-to-Image</h1>
+      <p class="sub">Left: source image (paste or upload). Right: generated result. Prompt and model selector are at the bottom.</p>
+    </section>
+
+    <section class="panels">
+      <section class="panel">
+        <span class="label">Original Image</span>
+        <div id="pasteZone" class="paste-zone" tabindex="0">
+          <strong>Paste image here with Ctrl/Cmd + V</strong>
+          <small>You can click this box and paste from clipboard, or choose a local file.</small>
+          <label class="browse">
+            Choose File
+            <input id="fileInput" type="file" accept="image/*" />
+          </label>
+        </div>
+        <img id="sourcePreview" class="preview" alt="Source preview" />
+      </section>
+
+      <section class="panel">
+        <div class="result-actions">
+          <span class="label">Result Image</span>
+          <a id="downloadLink" class="download" download="edited-image.png">Download</a>
+        </div>
+        <img id="resultPreview" class="preview" alt="Generated image preview" />
+      </section>
+    </section>
+
+    <section class="composer">
+      <label class="label" for="promptInput">Prompt</label>
+      <textarea id="promptInput" placeholder="Example: Turn this into a cinematic dusk look, keep the main subject and composition."></textarea>
+      <div class="controls">
+        <div class="field">
+          <label class="label" for="modelSelect">Model</label>
+          <select id="modelSelect"></select>
+        </div>
+      </div>
+      <div class="row">
+        <p id="statusText" class="status">Ready.</p>
+        <button id="generateBtn" type="button">Generate</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const pasteZone = document.getElementById("pasteZone");
+    const sourcePreview = document.getElementById("sourcePreview");
+    const resultPreview = document.getElementById("resultPreview");
+    const promptInput = document.getElementById("promptInput");
+    const modelSelect = document.getElementById("modelSelect");
+    const statusText = document.getElementById("statusText");
+    const generateBtn = document.getElementById("generateBtn");
+    const downloadLink = document.getElementById("downloadLink");
+
+    let sourceFile = null;
+    let resultBlobUrl = "";
+    let sourceBlobUrl = "";
+
+    function setStatus(message, type) {
+      statusText.textContent = message;
+      statusText.classList.remove("ok", "err");
+      if (type) {
+        statusText.classList.add(type);
+      }
+    }
+
+    function releaseBlobUrl(url) {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    function setModelOptions(models, defaultModel) {
+      modelSelect.innerHTML = "";
+      for (const model of models) {
+        const opt = document.createElement("option");
+        opt.value = model;
+        opt.textContent = model;
+        if (model === defaultModel) {
+          opt.selected = true;
+        }
+        modelSelect.appendChild(opt);
+      }
+
+      if (!modelSelect.value && modelSelect.options.length > 0) {
+        modelSelect.options[0].selected = true;
+      }
+    }
+
+    async function loadModels() {
+      const fallbackModels = [
+        "gemini-3.1-flash-image-preview",
+        "gemini-3-pro-image-preview",
+        "gemini-2.5-flash-image"
+      ];
+
+      try {
+        const response = await fetch("/models");
+        if (!response.ok) {
+          throw new Error("Failed to load models.");
+        }
+        const payload = await response.json();
+        const models = Array.isArray(payload.models) && payload.models.length > 0
+          ? payload.models
+          : fallbackModels;
+        const defaultModel = payload.default || models[0];
+        setModelOptions(models, defaultModel);
+      } catch (_error) {
+        setModelOptions(fallbackModels, fallbackModels[0]);
+        setStatus("Using local model list (model API unavailable).");
+      }
+    }
+
+    function setSource(file) {
+      sourceFile = file;
+      releaseBlobUrl(sourceBlobUrl);
+      sourceBlobUrl = URL.createObjectURL(file);
+      sourcePreview.src = sourceBlobUrl;
+      setStatus("Source image ready.", "ok");
+    }
+
+    function pickImageFromClipboard(event) {
+      const items = event.clipboardData?.items || [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const blob = item.getAsFile();
+          if (blob) {
+            const name = `pasted-${Date.now()}.png`;
+            return new File([blob], name, { type: blob.type || "image/png" });
+          }
+        }
+      }
+      return null;
+    }
+
+    fileInput.addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      if (!file) {
+        return;
+      }
+      setSource(file);
+    });
+
+    pasteZone.addEventListener("click", () => {
+      pasteZone.focus();
+    });
+
+    pasteZone.addEventListener("paste", (event) => {
+      const file = pickImageFromClipboard(event);
+      if (file) {
+        event.preventDefault();
+        setSource(file);
+      }
+    });
+
+    window.addEventListener("paste", (event) => {
+      const file = pickImageFromClipboard(event);
+      if (file) {
+        event.preventDefault();
+        setSource(file);
+      }
+    });
+
+    generateBtn.addEventListener("click", async () => {
+      const prompt = promptInput.value.trim();
+      const model = modelSelect.value;
+      if (!sourceFile) {
+        setStatus("Please paste or upload a source image first.", "err");
+        return;
+      }
+      if (!prompt) {
+        setStatus("Please enter a prompt.", "err");
+        return;
+      }
+      if (!model) {
+        setStatus("Please choose a model.", "err");
+        return;
+      }
+
+      generateBtn.disabled = true;
+      setStatus("Generating...");
+      releaseBlobUrl(resultBlobUrl);
+      resultBlobUrl = "";
+      downloadLink.style.display = "none";
+
+      try {
+        const formData = new FormData();
+        formData.append("image", sourceFile);
+        formData.append("prompt", prompt);
+        formData.append("model", model);
+
+        const response = await fetch("/edit", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          let detail = "Generation failed.";
+          try {
+            const data = await response.json();
+            detail = data.detail || data.error || detail;
+          } catch (_ignored) {
+          }
+          throw new Error(detail);
+        }
+
+        const blob = await response.blob();
+        resultBlobUrl = URL.createObjectURL(blob);
+        resultPreview.src = resultBlobUrl;
+        downloadLink.href = resultBlobUrl;
+        downloadLink.style.display = "inline-block";
+        setStatus(`Done (${model}).`, "ok");
+      } catch (error) {
+        setStatus(error.message || "Unexpected error.", "err");
+      } finally {
+        generateBtn.disabled = false;
+      }
+    });
+
+    loadModels();
+  </script>
+</body>
+</html>
